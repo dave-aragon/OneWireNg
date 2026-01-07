@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2023,2025 Piotr Stolarz
+ * Copyright (c) 2019-2023 Piotr Stolarz
  * OneWireNg: Arduino 1-wire service library
  *
  * Distributed under the 2-clause BSD License (the License)
@@ -167,8 +167,10 @@ public:
      * @param power If parasite powering is supported, setting the argument
      *     to @c true powers the bus after the operation finishes. See @ref
      *     powerBus() for details.
+     *
+     * @note This method is part of the extended virtual interface.
      */
-    void writeBit(int bit, bool power = false) {
+    EXT_VIRTUAL_INTF void writeBit(int bit, bool power = false) {
         touchBit(bit, power);
     }
 
@@ -177,8 +179,10 @@ public:
      *
      * @param bit Byte to be written on the bus.
      * @param power Same as for @ref writeBit().
+     *
+     * @note This method is part of the extended virtual interface.
      */
-    void writeByte(uint8_t byte, bool power = false) {
+    EXT_VIRTUAL_INTF void writeByte(uint8_t byte, bool power = false) {
         touchByte(byte, power);
     }
 
@@ -188,8 +192,10 @@ public:
      * @param bytes Array of bytes to be written on the bus.
      * @param len Length of the array.
      * @param power Same as for @ref writeBit().
+     *
+     * @note This method is part of the extended virtual interface.
      */
-    void writeBytes(
+    EXT_VIRTUAL_INTF void writeBytes(
         const uint8_t *bytes, size_t len, bool power = false)
     {
         for (size_t i = 0; i < len; i++)
@@ -200,8 +206,10 @@ public:
      * Bit read.
      *
      * @return Reading result.
+     *
+     * @note This method is part of the extended virtual interface.
      */
-    int readBit() {
+    EXT_VIRTUAL_INTF int readBit() {
         return touchBit(1);
     }
 
@@ -209,8 +217,10 @@ public:
      * Byte read with least significant bit transmitted first.
      *
      * @return Reading result.
+     *
+     * @note This method is part of the extended virtual interface.
      */
-    uint8_t readByte() {
+    EXT_VIRTUAL_INTF uint8_t readByte() {
         return touchByte(0xff);
     }
 
@@ -219,8 +229,10 @@ public:
      *
      * @param bytes Array of bytes to store the reading result.
      * @param len Number of bytes to read (length of the array).
+     *
+     * @note This method is part of the extended virtual interface.
      */
-    void readBytes(uint8_t *bytes, size_t len) {
+    EXT_VIRTUAL_INTF void readBytes(uint8_t *bytes, size_t len) {
         for (size_t i = 0; i < len; i++)
             bytes[i] = touchByte(0xff);
     }
@@ -248,6 +260,8 @@ public:
      *     - @c EC_BUS_ERROR: Bus error.
      *     - @c EC_CRC_ERROR: CRC error.
      *
+     * @note This method is part of the extended virtual interface.
+     *
      * @note It is possible to use C++11 range loop to iterate over connected
      *     slaves as in the following code snippet:
      *
@@ -259,12 +273,14 @@ public:
      * }
      * @endcode
      */
-    ErrorCode search(Id& id, bool alarm = false);
+    EXT_VIRTUAL_INTF ErrorCode search(Id& id, bool alarm = false);
 
     /**
      * Reset 1-wire search state for a subsequent search-scan process.
+     *
+     * @note This method is part of the extended virtual interface.
      */
-    void searchReset() {
+    EXT_VIRTUAL_INTF void searchReset() {
         _lzero = -1;
     }
 #endif /* CONFIG_SEARCH_ENABLED */

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021,2022,2024,2025 Piotr Stolarz
+ * Copyright (c) 2021,2022,2024 Piotr Stolarz
  * OneWireNg: Arduino 1-wire service library
  *
  * Distributed under the 2-clause BSD License (the License)
@@ -25,14 +25,12 @@ const DSTherm::FamilyCodeName
     { DS28EA00, STR(DS28EA00) }
 };
 
-OneWireNg::ErrorCode DSTherm::_readScratchpad(const OneWireNg::Id& id,
-    Scratchpad *scratchpad, bool addressAll)
+OneWireNg::ErrorCode DSTherm::readScratchpad(
+    const OneWireNg::Id& id, Scratchpad *scratchpad)
 {
-    OneWireNg::ErrorCode ec = (addressAll ?
-        _ow.addressAll():
-        _ow.addressSingle(id));
-
-    if (ec == OneWireNg::EC_SUCCESS) {
+    OneWireNg::ErrorCode ec = _ow.addressSingle(id);
+    if (ec == OneWireNg::EC_SUCCESS)
+    {
         uint8_t cmd[1 + Scratchpad::LENGTH] = {
             CMD_READ_SCRATCHPAD,
             /* the read scratchpad will be placed here (9 bytes) */
@@ -51,16 +49,6 @@ OneWireNg::ErrorCode DSTherm::_readScratchpad(const OneWireNg::Id& id,
     return ec;
 }
 
-OneWireNg::ErrorCode DSTherm::readScratchpad(
-    const OneWireNg::Id& id, Scratchpad *scratchpad)
-{
-    OneWireNg::ErrorCode ec = _ow.addressSingle(id);
-    if (ec == OneWireNg::EC_SUCCESS)
-        ec = _readScratchpad(id, scratchpad);
-
-    return ec;
-}
-
 OneWireNg::ErrorCode DSTherm::readScratchpadSingle(
     Scratchpad *scratchpad, bool reuseId)
 {
@@ -74,7 +62,7 @@ OneWireNg::ErrorCode DSTherm::readScratchpadSingle(
         (getFamilyName(scratchpad->_id) != NULL) &&
         (OneWireNg::checkCrcId(scratchpad->_id) == OneWireNg::EC_SUCCESS))
     {
-        ec = _readScratchpad(scratchpad->_id, scratchpad, true);
+        ec = readScratchpad(scratchpad->_id, scratchpad);
     } else
     {
         OneWireNg::Id id;
@@ -82,8 +70,7 @@ OneWireNg::ErrorCode DSTherm::readScratchpadSingle(
         ec = _ow.readSingleId(id);
         if (ec == OneWireNg::EC_SUCCESS) {
             ec = (getFamilyName(id) != NULL ?
-                _readScratchpad(id, scratchpad, true) :
-                OneWireNg::EC_UNSUPPORED);
+                readScratchpad(id, scratchpad) : OneWireNg::EC_UNSUPPORED);
         }
     }
     return ec;
@@ -175,44 +162,6 @@ OneWireNg::ErrorCode DSTherm::_writeScratchpad(
         _ow.writeBytes(cmd, cmd_len);
     }
     return ec;
-}
-
-OneWireNg::ErrorCode DSTherm::_copyScratchpad(
-    const OneWireNg::Id *id, bool parasitic, int copyTime)
-{
-    OneWireNg::ErrorCode ec =
-        (id ? _ow.addressSingle(*id) : _ow.addressAll());
-
-    if (ec == OneWireNg::EC_SUCCESS) {
-        _ow.writeByte(CMD_COPY_SCRATCHPAD, parasitic);
-        waitForCompletion((copyTime <= 0 ? 0 : copyTime),
-            parasitic, 0 /* not used */);
-    }
-    return ec;
-}
-
-OneWireNg::ErrorCode DSTherm::_recallEeprom(const OneWireNg::Id *id)
-{
-    OneWireNg::ErrorCode ec =
-        (id ? _ow.addressSingle(*id) : _ow.addressAll());
-
-    if (ec == OneWireNg::EC_SUCCESS)
-        _ow.writeByte(CMD_RECALL_E2);
-
-    return ec;
-}
-
-int DSTherm::_readPowerSupply(const OneWireNg::Id *id)
-{
-    int status = 1;
-    OneWireNg::ErrorCode ec =
-        (id ? _ow.addressSingle(*id) : _ow.addressAll());
-
-    if (ec == OneWireNg::EC_SUCCESS) {
-        _ow.writeByte(CMD_READ_POW_SUPPLY);
-        status = _ow.readBit();
-    }
-    return status;
 }
 
 OneWireNg::ErrorCode DSTherm::Scratchpad::writeScratchpad() const

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021,2022,2024,2025 Piotr Stolarz
+ * Copyright (c) 2021,2022,2024 Piotr Stolarz
  * OneWireNg: Arduino 1-wire service library
  *
  * Distributed under the 2-clause BSD License (the License)
@@ -357,23 +357,20 @@ public:
      * Read sensor scratchpad - single sensor mode.
      *
      * The routine performs the following steps:
-     * - Get connected sensor id by calling @ref OneWireNg::readSingleId().
-     *   This step is necessary to detect type of sensor and properly parse
-     *   its scratchpad.
-     * - Addressing all slaves on the bus, "Read Scratchpad" command (0xBE) is
-     *   sent to read sensor's scratchpad out.
-     * If more than one sensor is connected the routine fails with @c EC_CRC_ERROR
-     * error code.
+     * - Detects connected sensor id by calling @ref OneWireNg::readSingleId().
+     *   If more than one sensor is connected the routine returns @c EC_CRC_ERROR.
+     * - Calls @ref readScratchpad() with the id from the previous step.
      *
      * To avoid redundant @c readSingleId() calls on a single sensor environment
-     * @c reuseId argument may indicate to reuse sensor id stored in @c scratchpad
-     * set by the previous call to the routine:
+     * @c reuseId argument may use sensor id stored in @c scratchpad set by the
+     * previous call to the routine:
      * - If @c reuseId is @c true (default value), the routine examines passed
      *   @c scratchpad content if it contains valid sensor id. If so, the id
      *   is used and the @c readSingleId() is not called. To avoid ambiguous
      *   behavior of initial call of the routine resulted from using uninitialized
      *   memory of the scratchpad placeholder, it's recommended to initialize
-     *   the placeholder with zeroes. @see PlaceholderInit.
+     *   the placeholder with zeroes. See @c Init parameter of @ref Placeholder
+     *   template.
      * - If @c reuseId is @c false, the routine calls @c readSingleId() every
      *   time to scan the bus for a connected sensor.
      *
@@ -569,9 +566,9 @@ public:
     const static uint8_t CMD_READ_SCRATCHPAD  = 0xBE;
 
     /** Supported thermometers families */
-    const static uint8_t DS18S20  = 0x10; // also DS1820
+    const static uint8_t DS18S20  = 0x10;
     const static uint8_t DS1822   = 0x22;
-    const static uint8_t DS18B20  = 0x28; // also MAX31820
+    const static uint8_t DS18B20  = 0x28;
     const static uint8_t DS1825   = 0x3B;
     const static uint8_t DS28EA00 = 0x42;
 
@@ -597,18 +594,46 @@ protected:
         return ec;
     }
 
-    OneWireNg::ErrorCode _readScratchpad(const OneWireNg::Id& id,
-        Scratchpad *scratchpad, bool addressAll = false);
-
     OneWireNg::ErrorCode _writeScratchpad(const OneWireNg::Id *id,
         int8_t th, int8_t tl, uint8_t res, uint8_t addr);
 
     OneWireNg::ErrorCode _copyScratchpad(
-        const OneWireNg::Id *id, bool parasitic, int copyTime);
+        const OneWireNg::Id *id, bool parasitic, int copyTime)
+    {
+        OneWireNg::ErrorCode ec =
+            (id ? _ow.addressSingle(*id) : _ow.addressAll());
 
-    OneWireNg::ErrorCode _recallEeprom(const OneWireNg::Id *id);
+        if (ec == OneWireNg::EC_SUCCESS) {
+            _ow.writeByte(CMD_COPY_SCRATCHPAD, parasitic);
+            waitForCompletion((copyTime <= 0 ? 0 : copyTime),
+                parasitic, 0 /* not used */);
+        }
+        return ec;
+    }
 
-    int _readPowerSupply(const OneWireNg::Id *id);
+    OneWireNg::ErrorCode _recallEeprom(const OneWireNg::Id *id)
+    {
+        OneWireNg::ErrorCode ec =
+            (id ? _ow.addressSingle(*id) : _ow.addressAll());
+
+        if (ec == OneWireNg::EC_SUCCESS)
+            _ow.writeByte(CMD_RECALL_E2);
+
+        return ec;
+    }
+
+    int _readPowerSupply(const OneWireNg::Id *id)
+    {
+        int status = 1;
+        OneWireNg::ErrorCode ec =
+            (id ? _ow.addressSingle(*id) : _ow.addressAll());
+
+        if (ec == OneWireNg::EC_SUCCESS) {
+            _ow.writeByte(CMD_READ_POW_SUPPLY);
+            status = _ow.readBit();
+        }
+        return status;
+    }
 
     /* integer right shift (sign aware) */
     static long rsh(long v, int sh) {
